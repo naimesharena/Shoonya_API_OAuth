@@ -74,3 +74,7 @@ class NorenApiPy(NorenApi):
                             retention=order.retention, remarks=order.remarks)
         #print(ret)
         return ret
+
+# Backward-compatibility alias: ShoonyaApiPy is the same as NorenApiPy
+# This fixes `from api_helper import ShoonyaApiPy` ImportError
+ShoonyaApiPy = NorenApiPy
