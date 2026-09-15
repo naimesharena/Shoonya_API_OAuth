@@ -74,7 +74,8 @@ if ret != None:
         print('p => contract info n properties')    
         print('v => get 1 min market data')
         print('t => get today 1 min market data')
-        print('d => get daily data')
+        print('d => get daily data (full history)')
+        print('y => get daily data for YEAR 2010 only')
         print('o => get option chain')
         print('s => start_websocket')
         print('q => quit')
@@ -156,6 +157,60 @@ if ret != None:
             print("Old: ['{\"time\":\"11-SEP-2026\", \"into\":\"1267.00\",...}', ...] (200k bytes, ~1250 items)")
             print("New: [{'time':'11-SEP-2026', 'into':'1267.00', ...}, ...] parsed dicts")
             print("Fix: _parse_eod_response() does json.loads on each string element")
+
+        elif prompt1 == 'y':
+            # NEW: Fetch data only for year 2010
+            exch = 'NSE'
+            tsym = 'RELIANCE-EQ'
+            print("\n=== Daily Data for YEAR 2010 Only ===")
+            import datetime as dt
+            start_2010 = dt.datetime(2010, 1, 1, 0, 0, 0).timestamp()
+            end_2010 = dt.datetime(2010, 12, 31, 23, 59, 59).timestamp()
+            print(f"Fetching {exch}:{tsym} from 2010-01-01 to 2010-12-31")
+            print(f"  start={start_2010} (2010-01-01), end={end_2010} (2010-12-31)")
+
+            # Method 1: simple
+            print("\nMethod 1: get_daily_price_series(startdate=2010-01-01, enddate=2010-12-31)")
+            ret_2010 = api.get_daily_price_series(exchange=exch, tradingsymbol=tsym, startdate=start_2010, enddate=end_2010)
+            print(f"Got {len(ret_2010) if ret_2010 else 0} candles for 2010")
+            if ret_2010:
+                print(f"First: {ret_2010[0]}")
+                print(f"Last: {ret_2010[-1]}")
+                df = pd.DataFrame.from_dict(ret_2010)
+                print(df.head())
+                print(df.tail())
+                try:
+                    df['time_dt'] = pd.to_datetime(df['time'], format='%d-%b-%Y')
+                    print(f"Date range: {df['time_dt'].min()} to {df['time_dt'].max()}")
+                except Exception as e:
+                    print(f"Date parse: {e}")
+
+            # Method 2: full method (more robust)
+            print("\nMethod 2: get_daily_price_series_full for 2010")
+            ret_2010_full = api.get_daily_price_series_full(exchange=exch, tradingsymbol=tsym, startdate=start_2010, enddate=end_2010, chunk_years=1)
+            print(f"Got {len(ret_2010_full) if ret_2010_full else 0} candles via full method")
+            if ret_2010_full:
+                print(f"First: {ret_2010_full[0].get('time')} to Last: {ret_2010_full[-1].get('time')}")
+
+            # Method 3: Nifty 50 for 2010 parallel
+            print("\nMethod 3: Nifty 50 for 2010 all at once (parallel, 5 workers)")
+            NIFTY_10 = ["RELIANCE-EQ", "TCS-EQ", "INFY-EQ", "HDFCBANK-EQ", "ICICIBANK-EQ"]
+            try:
+                import concurrent.futures
+                def fetch_2010(sym):
+                    d = api.get_daily_price_series(exchange='NSE', tradingsymbol=sym, startdate=start_2010, enddate=end_2010)
+                    return sym, len(d) if d else 0, d[0].get('time') if d else None, d[-1].get('time') if d else None
+                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
+                    for f in concurrent.futures.as_completed([ex.submit(fetch_2010, s) for s in NIFTY_10]):
+                        sym, cnt, first, last = f.result()
+                        print(f"  {sym}: {cnt} candles, {first} to {last}")
+            except Exception as e:
+                print(f"Parallel error: {e}")
+
+            print("\nTo fetch any year, change:")
+            print("  start = datetime(YYYY,1,1).timestamp()")
+            print("  end = datetime(YYYY,12,31,23,59,59).timestamp()")
+            print("  api.get_daily_price_series(exch, tsym, startdate=start, enddate=end)")
 
         elif prompt1 == 'p':
             exch  = 'NSE'
