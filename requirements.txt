@@ -3,3 +3,15 @@ NorenRestApiOAuth
 selenium>=4.15.0
 webdriver-manager>=4.0.0
 pyotp>=2.9.0
+certifi>=2023.0
+# Windows SSL fix - helps with CERTIFICATE_VERIFY_FAILED on Windows Bootcamp / PyCharm
+# Pick one:
+pip-system-certs>=4.0 ; sys_platform == "win32"
+# python-certifi-win32 is alternative for Windows cert store integration
+# python-certifi-win32>=1.6 ; sys_platform == "win32"
+websocket-client>=1.5.0
+pandas>=1.5.0
+# For realtime Excel Nifty 50 low latency feed
+xlwings>=0.30.0
+xlsxwriter>=3.0.0
+openpyxl>=3.1.0

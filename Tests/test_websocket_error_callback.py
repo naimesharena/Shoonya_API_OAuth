@@ -30,7 +30,12 @@ def event_error_callback(error_msg):
 #end of callbacks
 
 #start of our program
-api = NorenApiPy()
+# SSL FIX for Windows Bootcamp / PyCharm:
+# If you get [SSL: CERTIFICATE_VERIFY_FAILED] self-signed certificate in chain,
+# the patched library now uses certifi automatically.
+# If still failing: pip install pip-system-certs  OR use disable_ssl=True (insecure, testing only)
+api = NorenApiPy()  # secure default with certifi
+# api = NorenApiPy(disable_ssl=True)  # insecure workaround for Windows Bootcamp
 
 #yaml for parameters
 with open('../cred.yml') as f:
@@ -51,6 +56,8 @@ if ret != None:
                               subscribe_callback=event_handler_quote_update, 
                               socket_open_callback=event_open_callback,
                               socket_error_callback=event_error_callback)
+    # Workaround if CERTIFICATE_VERIFY_FAILED persists on Windows:
+    # ret = api.start_websocket(..., disable_ssl=True)
     
     while True:
         print('q => quit')

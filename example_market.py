@@ -115,8 +115,47 @@ if ret != None:
         elif prompt1 == 'd':
             exch  = 'NSE'
             tsym = 'RELIANCE-EQ'
+            print("\n=== Daily Data - Why only 5 years? ===")
+            print("Shoonya's EODChartData endpoint has a limit of ~1250 candles / ~5 years per request.")
+            print("When you pass startdate=0 (1970), it returns only last 5 years (2021-2026 in your log).")
+            print("Your log shows: list of JSON strings like '{\"time\":\"11-SEP-2026\",...}'")
+            print("This is fixed now - auto-parses stringified JSON and auto-chunks for full history.\n")
+
+            # Option 1: Old way - now auto-chunked and parsed (returns list of dicts)
+            print("Option 1: api.get_daily_price_series(startdate=0) - now auto-chunked for full history")
             ret = api.get_daily_price_series(exchange=exch, tradingsymbol=tsym, startdate=0)
-            print(ret)
+            print(f"Got {len(ret) if ret else 0} candles (should be >1250 if full history)")
+            if ret:
+                print(f"First: {ret[0]}")
+                print(f"Last: {ret[-1]}")
+                df = pd.DataFrame.from_dict(ret)
+                print(df.head())
+                print(df.tail())
+                # Convert time to datetime for analysis
+                try:
+                    df['time_dt'] = pd.to_datetime(df['time'], format='%d-%b-%Y')
+                    print(f"\nDate range: {df['time_dt'].min()} to {df['time_dt'].max()} = {(df['time_dt'].max()-df['time_dt'].min()).days} days")
+                except Exception as e:
+                    print(f"Date parse error: {e}")
+
+            # Option 2: Explicit full history with 1-year chunks for 10+ years
+            print("\n\nOption 2: api.get_daily_price_series_full() - explicit full history (recommended for >5 years)")
+            print("Fetching 10 years in 1-year chunks...")
+            import datetime as dt
+            ten_years_ago = (dt.datetime.now() - dt.timedelta(days=10*365)).timestamp()
+            ret_full = api.get_daily_price_series_full(exchange=exch, tradingsymbol=tsym, startdate=ten_years_ago, chunk_years=1)
+            print(f"Got {len(ret_full) if ret_full else 0} candles for 10 years")
+            if ret_full:
+                df_full = pd.DataFrame.from_dict(ret_full)
+                print(df_full.head())
+                print(df_full.tail())
+                print(f"\nTo get 20 years: api.get_daily_price_series_full(exch, tsym, startdate=0, chunk_years=2)")
+
+            # Option 3: Show raw vs parsed difference
+            print("\n\nDebug: Old response was list of strings, new is list of dicts")
+            print("Old: ['{\"time\":\"11-SEP-2026\", \"into\":\"1267.00\",...}', ...] (200k bytes, ~1250 items)")
+            print("New: [{'time':'11-SEP-2026', 'into':'1267.00', ...}, ...] parsed dicts")
+            print("Fix: _parse_eod_response() does json.loads on each string element")
 
         elif prompt1 == 'p':
             exch  = 'NSE'

@@ -61,7 +61,19 @@ def get_time(time_string):
     return time.mktime(data)
 
 #start of our program
-api = NorenApiPy()
+# FIX FOR Windows Bootcamp / PyCharm SSL error:
+# ERROR:websocket:[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain
+# The patched api_helper now uses certifi by default. If you still get SSL error, try:
+# 1) pip install --upgrade certifi
+# 2) pip install pip-system-certs  OR  pip install python-certifi-win32
+# 3) Disable SSL verification for testing only (insecure):
+#    api = NorenApiPy(disable_ssl=True)
+#    and pass disable_ssl=True to start_websocket
+# 4) Check antivirus (Avast, Kaspersky, etc) - disable HTTPS scanning or add api.shoonya.com to exclusions
+
+api = NorenApiPy()  # Default now uses certifi CA bundle automatically
+# For Windows Bootcamp quick workaround (insecure, use only for testing):
+# api = NorenApiPy(disable_ssl=True)
 
 #yaml for parameters
 with open('../cred.yml') as f:
@@ -79,7 +91,16 @@ if ret != None:
         cred['Account_ID']
     )
    
+    # Secure (default) - patched library uses certifi automatically
     ret = api.start_websocket(order_update_callback=event_handler_order_update, subscribe_callback=event_handler_quote_update, socket_open_callback=open_callback)
+    
+    # If you still get CERTIFICATE_VERIFY_FAILED on Windows, uncomment one of these:
+    # Option A: Quick insecure workaround for testing (not recommended for production)
+    # ret = api.start_websocket(order_update_callback=event_handler_order_update, subscribe_callback=event_handler_quote_update, socket_open_callback=open_callback, disable_ssl=True)
+    
+    # Option B: Explicit certifi bundle (secure)
+    # import ssl, certifi
+    # ret = api.start_websocket(order_update_callback=event_handler_order_update, subscribe_callback=event_handler_quote_update, socket_open_callback=open_callback, sslopt={"ca_certs": certifi.where(), "cert_reqs": ssl.CERT_REQUIRED})
     
     while True:
         if socket_opened == True:

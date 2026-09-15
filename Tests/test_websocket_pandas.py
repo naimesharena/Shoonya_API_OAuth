@@ -66,7 +66,8 @@ def get_time(time_string):
     return time.mktime(data)
 
 #start of our program
-api = NorenApiPy()
+# SSL FIX for Windows Bootcamp / PyCharm CERTIFICATE_VERIFY_FAILED
+api = NorenApiPy()  # now uses certifi automatically; for testing: NorenApiPy(disable_ssl=True)
 
 #yaml for parameters
 with open('../cred.yml') as f:
@@ -84,6 +85,7 @@ if ret != None:
         cred['Account_ID']
     )   
     ret = api.start_websocket(order_update_callback=event_handler_order_update, subscribe_callback=event_handler_quote_update, socket_open_callback=open_callback)
+    # If CERTIFICATE_VERIFY_FAILED on Windows: ret = api.start_websocket(..., disable_ssl=True)
     
     while True:
         if socket_opened == True:
